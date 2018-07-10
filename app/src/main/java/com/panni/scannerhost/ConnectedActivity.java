@@ -12,6 +12,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -31,6 +32,8 @@ public class ConnectedActivity extends AppCompatActivity {
 
     final public static String CONNECTED_ACTIVITY_KEY_URL = "connected_activity_key_url";
     final public static String CONNECTED_ACTIVITY_KEY_UID = "connected_activity_key_uid";
+
+    final public static int SCAN_NETWORK_TIMEOUT_MS = 30000;
 
     private String remote_url;
     private String remote_uid;
@@ -76,28 +79,35 @@ public class ConnectedActivity extends AppCompatActivity {
 
                 String url = remote_url + "/scan?uid=" + remote_uid;
                 StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                        new Response.Listener<String>() {
-                            @Override
-                            public void onResponse(String response) {
-                                dialog.dismiss();
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            dialog.dismiss();
 
-                                if (!response.equals("-1") && !response.equals("-2")) {
-                                    Toast.makeText(ConnectedActivity.this, "Scan complete!", Toast.LENGTH_SHORT).show();
-                                    newPageAcquired();
-                                } else {
-                                    Toast.makeText(ConnectedActivity.this, "There was an error!", Toast.LENGTH_LONG).show();
-                                }
+                            if (!response.equals("-1") && !response.equals("-2")) {
+                                Toast.makeText(ConnectedActivity.this, "Scan complete!", Toast.LENGTH_SHORT).show();
+                                newPageAcquired();
+                            } else {
+                                Toast.makeText(ConnectedActivity.this, "There was an error!", Toast.LENGTH_LONG).show();
                             }
-                        }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        new AlertDialog.Builder(ConnectedActivity.this)
-                                .setTitle("Network error")
-                                .setMessage("Unable to contact remote server")
-                                .show();
+                        }
+                    }, new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            dialog.dismiss();
+
+                            new AlertDialog.Builder(ConnectedActivity.this)
+                                    .setTitle("Network error")
+                                    .setMessage("Unable to contact remote server")
+                                    .show();
+                        }
                     }
-                }
                 );
+                stringRequest.setRetryPolicy(
+                        new DefaultRetryPolicy(
+                                SCAN_NETWORK_TIMEOUT_MS,  // to perform a complete scan
+                                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
                 queue.add(stringRequest);
             }
         });
